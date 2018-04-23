@@ -50,9 +50,9 @@ class Timely(object):
                                             password_hash=PW_HASH)
         self.user = self.last_fm.get_user(USERNAME)
 
-    def get_suggestions(self):
+    def get_suggestions(self, **kwargs):
         """
-        Returns a list of suggestions (dict), sorted by overall score.
+        Returns a list of suggestions (TopItem), sorted by overall score.
 
         Keyword Arguments
         -----------------
@@ -62,9 +62,18 @@ class Timely(object):
 
         res = []
 
-        # for now let's just get this working
-        res = self.user.get_top_albums(period=pylast.PERIOD_3MONTHS,
+        time_frame = kwargs.get('time_frame', pylast.PERIOD_3MONTHS)
+
+        res = self.user.get_top_albums(period=time_frame,
                                        limit=10)
+        album_dict = {}
+        # figure out album lengths of each album
+        for album in res:
+            album_len = self.get_album_length(album.item)
+            album_dict[album.item.get_name()] = album_len
+
+        # TODO: filter out albums over the time limit
+
         return res
 
     def get_album_length(self, album):
@@ -80,14 +89,21 @@ class Timely(object):
         int
             The number of minutes the album is.
         """
-        minutes = 1
+        minutes = 0
+        tracks = album.get_tracks()
+        # this is really slow, I'll probably need to write my own call
+        # to get album duration
+        for track in tracks:
+            # track duration comes in ms
+            minutes += (track.get_duration() / 1000)  # int division
+            print(track.get_name() + ": " + str(minutes))
         return minutes
 
 
 if __name__ == "__main__":
     # this is a bad idea, but let's put all the test code here for now
     timely = Timely()
-    suggestions = timely.get_suggestions()
+    suggestions = timely.get_suggestions(time_frame=pylast.PERIOD_1MONTH)
 
     for suggestion in suggestions:
         print(suggestion)
